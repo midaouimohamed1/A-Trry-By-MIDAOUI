@@ -5,11 +5,16 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "/dist/server.cjs"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "dist/server.cjs": {
+      "maxDuration": 30
+    }
+  }
 }

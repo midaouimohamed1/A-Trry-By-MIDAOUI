@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لعبة الاختفاء والتحول - HTML5 Prop Hunt Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .game-container {
+      max-width: 900px;
+      width: 100%;
+      background-color: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 10px;
+    }
+    h1 {
+      font-size: 1.4rem;
+      color: #38bdf8;
+    }
+    .status-bar {
+      display: flex;
+      gap: 15px;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    .timer {
+      background: #0284c7;
+      padding: 4px 12px;
+      border-radius: 8px;
+    }
+    .suspicion {
+      background: #e11d48;
+      padding: 4px 12px;
+      border-radius: 8px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background-color: #020617;
+      border-radius: 12px;
+      border: 1px solid #475569;
+      cursor: pointer;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 10px;
+    }
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn:hover {
+      background: #1d4ed8;
+    }
+    .btn-green {
+      background: #059669;
+    }
+    .btn-green:hover {
+      background: #047857;
+    }
+    .btn-danger {
+      background: #e11d48;
+    }
+    .map-buttons button {
+      background: #334155;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .map-buttons button.active {
+      background: #0284c7;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-container">
+  <header>
+    <h1>👻 لعبة الاختفاء والتحول (HTML5 Canvas)</h1>
+    <div class="status-bar">
+      <div className="timer" id="timerBox">الوقت: <span id="timerVal">25</span>s</div>
+      <div className="suspicion" id="suspicionBox">الشك: <span id="suspicionVal">0</span>%</div>
+    </div>
+  </header>
+
+  <div class="map-buttons">
+    <strong>اختر الخارطة: </strong>
+    <button id="mapAirplane" class="active" onclick="setMap('airplane')">✈️ الطائرة</button>
+    <button id="mapKitchen" onclick="setMap('kitchen')">🍳 المطبخ</button>
+    <button id="mapForest" onclick="setMap('forest')">🌲 الغابة</button>
+  </div>
+
+  <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+  <div class="controls">
+    <div>
+      <strong>اختر تحولك: </strong>
+      <select id="propSelect" onchange="changePlayerProp()">
+        <option value="🧳">🧳 حقيبة سفر</option>
+        <option value="🛋️">🛋️ وسادة نوم</option>
+        <option value="🍾">🍾 قارورة ماء</option>
+        <option value="☕">☕ كوب قهوة</option>
+        <option value="🍞">🍞 محمصة خبز</option>
+        <option value="🍄">🍄 فطر ملون</option>
+      </select>
+    </div>
+
+    <div>
+      <button class="btn btn-green" id="readyBtn" onclick="startSearchPhase()">جاهز! أطلق الوحش للبحث 👁️</button>
+      <button class="btn btn-danger" onclick="useSmokeBomb()">🌫️ قنبلة دخان</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let currentMap = 'airplane';
+  let isSearching = false;
+  let timer = 25;
+  let suspicion = 0;
+  let timerInterval = null;
+  let smokeActive = false;
+
+  let player = {
+    x: 400,
+    y: 280,
+    width: 45,
+    height: 45,
+    icon: '🧳'
+  };
+
+  let monster = {
+    x: 50,
+    y: 150,
+    dir: 1,
+    speed: 2,
+    angle: 0
+  };
+
+  function setMap(map) {
+    currentMap = map;
+    document.getElementById('mapAirplane').classList.remove('active');
+    document.getElementById('mapKitchen').classList.remove('active');
+    document.getElementById('mapForest').classList.remove('active');
+    if (map === 'airplane') document.getElementById('mapAirplane').classList.add('active');
+    if (map === 'kitchen') document.getElementById('mapKitchen').classList.add('active');
+    if (map === 'forest') document.getElementById('mapForest').classList.add('active');
+    resetGame();
+  }
+
+  function changePlayerProp() {
+    player.icon = document.getElementById('propSelect').value;
+  }
+
+  function resetGame() {
+    isSearching = false;
+    timer = 25;
+    suspicion = 0;
+    smokeActive = false;
+    monster.x = 50;
+    document.getElementById('timerVal').innerText = timer;
+    document.getElementById('suspicionVal').innerText = 0;
+    if (timerInterval) clearInterval(timerInterval);
+
+    timerInterval = setInterval(() => {
+      if (timer > 0) {
+        timer--;
+        document.getElementById('timerVal').innerText = timer;
+      } else {
+        if (!isSearching) {
+          startSearchPhase();
+        } else {
+          alert('🎉 نجحت في الاختفاء والصمود! الفوز!');
+          resetGame();
+        }
+      }
+    }, 1000);
+  }
+
+  function startSearchPhase() {
+    isSearching = true;
+    timer = 20;
+    document.getElementById('readyBtn').style.display = 'none';
+  }
+
+  function useSmokeBomb() {
+    if (!isSearching) return;
+    smokeActive = true;
+    setTimeout(() => { smokeActive = false; }, 3000);
+  }
+
+  canvas.addEventListener('click', (e) => {
+    if (isSearching) return;
+    const rect = canvas.getBoundingClientRect();
+    player.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    player.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+  });
+
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Background
+    if (currentMap === 'airplane') {
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(50, 60, 40, 60);
+      ctx.fillRect(710, 60, 40, 60);
+    } else if (currentMap === 'kitchen') {
+      ctx.fillStyle = '#292524';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#44403c';
+      ctx.fillRect(0, 220, canvas.width, 230);
+    } else {
+      ctx.fillStyle = '#064e3b';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#022c22';
+      ctx.fillRect(0, 250, canvas.width, 200);
+    }
+
+    // Draw Player Prop
+    ctx.font = '36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(player.icon, player.x, player.y);
+
+    if (!isSearching) {
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('مكانك (اضغط للتغيير)', player.x, player.y - 30);
+    }
+
+    // Update & Draw Monster if Searching
+    if (isSearching) {
+      monster.x += monster.dir * monster.speed;
+      if (monster.x > 750 || monster.x < 50) monster.dir *= -1;
+
+      if (!smokeActive) {
+        // Draw Flashlight Beam
+        ctx.fillStyle = suspicion > 50 ? 'rgba(225, 29, 72, 0.4)' : 'rgba(56, 189, 248, 0.3)';
+        ctx.beginPath();
+        ctx.moveTo(monster.x, monster.y);
+        ctx.arc(monster.x, monster.y, 180, Math.PI / 4, Math.PI * 3 / 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Detect collision with Player
+        let dx = player.x - monster.x;
+        let dy = player.y - monster.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 150 && player.y > monster.y) {
+          suspicion += 0.5;
+          document.getElementById('suspicionVal').innerText = Math.round(suspicion);
+          if (suspicion >= 100) {
+            alert('😱 كشفك الوحش! الخسارة!');
+            resetGame();
+          }
+        }
+      } else {
+        // Draw Smoke
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('🌫️ سحابة دخانية!', canvas.width / 2, 40);
+      }
+
+      // Draw Monster
+      ctx.font = '32px sans-serif';
+      ctx.fillText('👹', monster.x, monster.y);
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  resetGame();
+  gameLoop();
+</script>
+
+</body>
+</html>

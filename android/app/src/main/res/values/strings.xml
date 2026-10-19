@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AI Evaluation &amp; Model Hub</string>
+    <string name="title_activity_main">AI Evaluation &amp; Model Hub</string>
+    <string name="package_name">com.aisuite.evalhub</string>
+    <string name="custom_url_scheme">com.aisuite.evalhub</string>
+</resources>

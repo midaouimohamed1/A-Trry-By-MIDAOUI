@@ -1,0 +1,6 @@
+{
+  "name": "دليل 500 نموذج وأداة ذكاء اصطناعي - AI Models Directory & BYOK Playground",
+  "description": "دليل شامل وتفاعلي يضم أكثر من 1000 نموذج وأداة ذكاء اصطناعي مع حاسبة تكلفة الـ APIs الديناميكية، مختبر النماذج الحي ومقارنة الردود (BYOK Playground) المدعوم ببروكسي سحابي آمن، الموجه الذكي، وتصدير Markdown/JSON.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

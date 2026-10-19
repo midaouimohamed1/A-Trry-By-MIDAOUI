@@ -8,7 +8,7 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './src'),
       },
     },
     server: {
@@ -21,10 +21,16 @@ export default defineConfig(() => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('jspdf') || id.includes('canvas-confetti')) {
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('@google/genai')) {
+                return 'vendor-genai';
+              }
+              if (id.includes('canvas-confetti')) {
                 return 'vendor-export-tools';
               }
-              if (id.includes('motion') || id.includes('lucide-react')) {
+              if (id.includes('lucide-react')) {
                 return 'vendor-ui-icons';
               }
             }

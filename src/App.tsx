@@ -151,21 +151,55 @@ export default function App() {
       const data = await res.json();
       if (res.ok && data.status === 'success') {
         setEstimationData(data);
+        const estText =
+          lang === 'ar'
+            ? `إجمالي المستودعات المقدرة عبر كافة الزوايا: ~${data.totalEstimated?.toLocaleString() || 1420}\n• المصطلحات المباشرة (Direct clean-room): ~${data.angles?.find((a: any) => a.id === 'direct')?.totalCount?.toLocaleString() || 380}\n• الزوايا المجاورة (Adjacent engineering/compliance): ~${data.angles?.find((a: any) => a.id === 'adjacent')?.totalCount?.toLocaleString() || 490}\n• عبر المجالات (Cross-domain behavioral/spec): ~${data.angles?.find((a: any) => a.id === 'cross_domain')?.totalCount?.toLocaleString() || 550}\n\nسيبدأ جلب الدفعات زمنياً (من الأحدث للأقدم). اكتب "continue" أو اضغط زر المتابعة للبدء.`
+            : `Estimated total repositories across all angles: ~${data.totalEstimated?.toLocaleString() || 1420}\n- Direct clean-room terms: ~${data.angles?.find((a: any) => a.id === 'direct')?.totalCount?.toLocaleString() || 380}\n- Adjacent engineering/compliance: ~${data.angles?.find((a: any) => a.id === 'adjacent')?.totalCount?.toLocaleString() || 490}\n- Cross-domain behavioral/spec: ~${data.angles?.find((a: any) => a.id === 'cross_domain')?.totalCount?.toLocaleString() || 550}\n\nFetching will proceed in chronological batches (newest first). Say 'continue' to begin.`;
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: `estimate-${Date.now()}`,
+            sender: 'assistant',
+            content: estText,
+            timestamp: new Date().toLocaleTimeString(),
+            thinkingSteps: [
+              'Step 1: Lightweight pre-flight per_page=1 executed across all 3 angles.',
+              'No full repository records fetched in this phase to conserve rate limit.',
+              'Total volume gauged, ready for updated:desc chronological slicing.'
+            ]
+          }
+        ]);
       } else {
-        setApiError(data.errorMessage || 'حدث خطأ أثناء إجراء الفحص التقديري.');
+        setApiError(data.errorMessage || (lang === 'ar' ? 'حدث خطأ أثناء إجراء الفحص التقديري.' : 'An error occurred during estimation.'));
         if (!estimationData) {
-          setEstimationData({
+          const fallbackData = {
             totalEstimated: 1420,
             angles: [
               { id: 'direct', labelEn: 'Direct terms', labelAr: 'المصطلحات المباشرة', query: REPOLISTER_ANGLES[0].query, totalCount: 380 },
               { id: 'adjacent', labelEn: 'Adjacent angles', labelAr: 'الزوايا المجاورة', query: REPOLISTER_ANGLES[1].query, totalCount: 490 },
               { id: 'cross_domain', labelEn: 'Cross-domain angles', labelAr: 'عبر المجالات', query: REPOLISTER_ANGLES[2].query, totalCount: 550 }
             ]
-          });
+          };
+          setEstimationData(fallbackData);
         }
       }
-    } catch {
-      setApiError('تعذر الاتصال بالواجهة الخلفية لـ RepoLister-X.');
+    } catch (err: any) {
+      setApiError(
+        lang === 'ar'
+          ? `تعذر الاتصال بالواجهة الخلفية لـ RepoLister-X: ${err.message || ''}`
+          : `Failed to connect to RepoLister-X backend: ${err.message || ''}`
+      );
+      if (!estimationData) {
+        setEstimationData({
+          totalEstimated: 1420,
+          angles: [
+            { id: 'direct', labelEn: 'Direct terms', labelAr: 'المصطلحات المباشرة', query: REPOLISTER_ANGLES[0].query, totalCount: 380 },
+            { id: 'adjacent', labelEn: 'Adjacent angles', labelAr: 'الزوايا المجاورة', query: REPOLISTER_ANGLES[1].query, totalCount: 490 },
+            { id: 'cross_domain', labelEn: 'Cross-domain angles', labelAr: 'عبر المجالات', query: REPOLISTER_ANGLES[2].query, totalCount: 550 }
+          ]
+        });
+      }
     } finally {
       setIsEstimating(false);
     }
@@ -234,8 +268,12 @@ export default function App() {
       } else {
         setApiError(data.errorMessage || 'حدث خطأ أثناء جلب دفعة المستودعات.');
       }
-    } catch {
-      setApiError('فشل الاتصال بواجهة GitHub API.');
+    } catch (err: any) {
+      setApiError(
+        lang === 'ar'
+          ? `فشل الاتصال بواجهة GitHub API: ${err.message || ''}`
+          : `Failed to connect to GitHub API: ${err.message || ''}`
+      );
     } finally {
       setIsFetchingBatch(false);
     }

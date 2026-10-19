@@ -17,6 +17,11 @@ import {
 
 dotenv.config();
 
+// حماية إضافية ضد الانهيار المفاجئ للعمليات غير المعالجة
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Unhandled Rejection detected:', reason);
+});
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
@@ -234,7 +239,6 @@ async function startServer() {
       const angleBreakdown = { direct: 0, adjacent: 0, crossDomain: 0 };
 
       for (const raw of rawItems) {
-        // Classify which angle found it
         const text = `${raw.name} ${raw.description || ''} ${(raw.topics || []).join(' ')}`.toLowerCase();
         let angle: 'direct' | 'adjacent' | 'cross-domain' = 'direct';
         if (text.includes('clean room') || text.includes('clean-room') || text.includes('black box')) {
@@ -256,7 +260,6 @@ async function startServer() {
         }
       }
 
-      // 50 per batch
       const batchItems = processedItems.slice(0, 50);
       const newTotalFound = totalFoundSoFar + batchItems.length;
       const hasMoreBatches = page * 50 < totalCountForRange;
@@ -309,7 +312,7 @@ async function startServer() {
   });
 
   // Vite middleware for dev or static serving for prod
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

@@ -112,9 +112,9 @@ export default function App() {
       .catch(() => {
         const generated: Array<{ start: string; end: string; label: string }> = [];
         const now = new Date();
-        let cur = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let cur = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         for (let i = 0; i < 24; i++) {
-          const start = new Date(cur.getFullYear(), cur.getMonth(), 1);
+          const start = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), 1));
           generated.push({
             start: start.toISOString().slice(0, 10),
             end: cur.toISOString().slice(0, 10),

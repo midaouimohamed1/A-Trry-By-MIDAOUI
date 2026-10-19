@@ -157,10 +157,10 @@ export function generateDateRanges(monthsCount: number = 36): DateRangeSlice[] {
   const ranges: DateRangeSlice[] = [];
   const now = new Date();
 
-  let currentEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let currentEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
   for (let i = 0; i < monthsCount; i++) {
-    const startOfMonth = new Date(currentEnd.getFullYear(), currentEnd.getMonth(), 1);
+    const startOfMonth = new Date(Date.UTC(currentEnd.getUTCFullYear(), currentEnd.getUTCMonth(), 1));
     const startStr = startOfMonth.toISOString().slice(0, 10);
     const endStr = currentEnd.toISOString().slice(0, 10);
 
@@ -181,8 +181,8 @@ export function generateDateRanges(monthsCount: number = 36): DateRangeSlice[] {
  * Subdivide a month into 4 week slices if it is full (> 900 results)
  */
 export function subdivideMonthIntoWeeks(monthSlice: DateRangeSlice): DateRangeSlice[] {
-  const startDate = new Date(monthSlice.start);
-  const endDate = new Date(monthSlice.end);
+  const startDate = new Date(monthSlice.start + 'T00:00:00Z');
+  const endDate = new Date(monthSlice.end + 'T23:59:59Z');
   const weekSlices: DateRangeSlice[] = [];
 
   let curStart = new Date(startDate);

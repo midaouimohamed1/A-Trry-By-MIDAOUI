@@ -6,7 +6,7 @@
 export type RepoListerAngleType = 'direct' | 'adjacent' | 'cross-domain';
 
 export interface RepoListerAngleDefinition {
-  id: 'direct' | 'adjacent' | 'cross_domain';
+  id: 'direct' | 'adjacent' | 'cross-domain'; // تم توحيدها لتتوافق مع البقية
   labelEn: string;
   labelAr: string;
   descriptionEn: string;

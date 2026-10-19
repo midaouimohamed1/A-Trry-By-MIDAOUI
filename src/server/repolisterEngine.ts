@@ -1,18 +1,18 @@
 /**
- * RepoLister-X Engine
+ * RepoLister-X Search Engine
  * 
- * Specialized GitHub catalog assistant tool focused on "clean-room reverse engineering"
- * and the principle of separating behavioral specification from implementation.
- * 
- * Complies with strict search protocol:
- * - 3-angle search strategy: Direct, Adjacent, Cross-Domain.
- * - Pre-flight per_page=1 estimation for total_count calculation across all angles.
- * - Date-range chunking (newest first, starting today) to bypass 1,000 result API ceiling.
- * - Minimum 2-second rate-limiting delay between requests (10 req/min compliance).
- * - Chronological sort by updated/desc (never stars/popularity).
- * - Neutral self-description reporting, flagging uncertain items ("flagged, verify yourself"),
- *   and tracking omitted count ("never silently drop anything").
- * - Numbered batches (50 per batch) with exact footer.
+ * Implements the complete protocol for "RepoLister-X":
+ * - Single Source: GitHub only (no Google, YouTube, blogs).
+ * - No ratings or recommendations. No explanations of how tools or exploits work.
+ * - 3 mandatory search angles: Direct terms, Adjacent angles, Cross-domain analogies.
+ * - Step 1: Lightweight estimation per_page=1 reading total_count and summing them.
+ * - Step 2: Search names and descriptions via https://api.github.com/search/repositories?q=...&sort=updated&order=desc&per_page=100&page=N
+ * - Step 3: Split by date range (month-by-month, or week-by-week when full).
+ * - Step 4: Strict >= 2-second rate-limiting delay between requests (respecting 10 req/min).
+ * - Step 5: Never sort by stars or popularity.
+ * - Uncertain results: Include with neutral description and "flagged, verify yourself".
+ * - Omitted results: Only omit clearly unrelated, and report how many were omitted.
+ * - Output: Numbered list 50 per message with exact footer and "Type continue for the next batch".
  */
 
 export interface RepoListerAngle {
@@ -44,7 +44,7 @@ export const REPOLISTER_ANGLES: RepoListerAngle[] = [
     id: 'adjacent',
     labelEn: 'Adjacent angles',
     labelAr: 'الزوايا والمسارات المجاورة',
-    descriptionEn: 'Technical specification writing tools/templates used by RE teams; legal/compliance templates; older repos (10-20+ yrs)',
+    descriptionEn: 'Technical specification writing tools/templates used by RE teams; legal/compliance templates proving independent development; older repos (10-20+ yrs)',
     descriptionAr: 'قوالب وأدوات كتابة المواصفات الفنية للفرق العكسية، قوالب الامتثال القانوني للإثبات المستقل، ومشاريع تاريخية (10-20+ سنة)',
     query: '"technical specification" "reverse engineering" OR "clean room" compliance OR "independent development" "reverse engineering" OR "cleanroom software engineering"',
     terms: [
@@ -60,12 +60,12 @@ export const REPOLISTER_ANGLES: RepoListerAngle[] = [
     labelAr: 'زوايا عبر المجالات والنطاقات المتعددة',
     descriptionEn: 'Analogies for "separate the meaning from the exact form" across law, translation, architecture, and documentation',
     descriptionAr: 'قياسات ونماذج مبدأ "فصل المعنى والدلالة عن الشكل البرمجي الدقيق" في القانون، والترجمة، والمعمارية البرمجية',
-    query: '"behavioral specification" "implementation" OR "specification-driven" "clean-room" OR "intermediate representation" "specification" OR "clean slate" specification',
+    query: '"behavioral specification" "implementation" OR "specification-driven" "clean-room" OR "clean slate" specification OR "intermediate representation" "specification"',
     terms: [
       'behavioral specification implementation',
       'specification-driven clean-room',
-      'intermediate representation specification',
-      'clean slate specification'
+      'clean slate specification',
+      'intermediate representation specification'
     ]
   }
 ];
@@ -99,6 +99,13 @@ export interface FormattedRepo {
   language: string | null;
 }
 
+export interface DateRangeSlice {
+  start: string;
+  end: string;
+  label: string;
+  type: 'month' | 'week';
+}
+
 export interface RepoListerBatchResult {
   batchNumber: number;
   dateRange: {
@@ -118,16 +125,17 @@ export interface RepoListerBatchResult {
   };
   formattedTextAr: string;
   formattedTextEn: string;
-  nextDateRange?: {
-    start: string;
-    end: string;
-  } | null;
   hasMoreBatches: boolean;
+  angleBreakdown: {
+    direct: number;
+    adjacent: number;
+    crossDomain: number;
+  };
 }
 
-// In-memory timestamp to enforce minimum 2-second delay between GitHub API requests
+// In-memory rate limiter tracker: enforces >= 2 seconds delay between requests
 let lastGitHubRequestTime = 0;
-const MIN_REQUEST_INTERVAL_MS = 2100; // 2.1 seconds to be safely above 2s
+const MIN_REQUEST_INTERVAL_MS = 2100; // 2.1 seconds to guarantee safety
 
 export async function enforceRateLimitDelay(): Promise<number> {
   const now = Date.now();
@@ -142,28 +150,27 @@ export async function enforceRateLimitDelay(): Promise<number> {
 }
 
 /**
- * Generate date range intervals (month by month) starting from today backwards
+ * Generate date range intervals (month by month, with week-by-week subdivision capability)
+ * Starting from today backwards
  */
-export function generateDateRanges(count: number = 24): Array<{ start: string; end: string; label: string }> {
-  const ranges: Array<{ start: string; end: string; label: string }> = [];
+export function generateDateRanges(monthsCount: number = 36): DateRangeSlice[] {
+  const ranges: DateRangeSlice[] = [];
   const now = new Date();
 
   let currentEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  for (let i = 0; i < count; i++) {
-    // Current slice starts at the 1st of this month, ends at currentEnd
+  for (let i = 0; i < monthsCount; i++) {
     const startOfMonth = new Date(currentEnd.getFullYear(), currentEnd.getMonth(), 1);
-    
     const startStr = startOfMonth.toISOString().slice(0, 10);
     const endStr = currentEnd.toISOString().slice(0, 10);
 
     ranges.push({
       start: startStr,
       end: endStr,
-      label: `${startStr} .. ${endStr}`
+      label: `${startStr} .. ${endStr}`,
+      type: 'month'
     });
 
-    // Move to the last day of the previous month
     currentEnd = new Date(startOfMonth.getTime() - 24 * 60 * 60 * 1000);
   }
 
@@ -171,7 +178,36 @@ export function generateDateRanges(count: number = 24): Array<{ start: string; e
 }
 
 /**
- * Query GitHub API with per_page=1 to fetch the total_count for an angle
+ * Subdivide a month into 4 week slices if it is full (> 900 results)
+ */
+export function subdivideMonthIntoWeeks(monthSlice: DateRangeSlice): DateRangeSlice[] {
+  const startDate = new Date(monthSlice.start);
+  const endDate = new Date(monthSlice.end);
+  const weekSlices: DateRangeSlice[] = [];
+
+  let curStart = new Date(startDate);
+  while (curStart <= endDate) {
+    const curEnd = new Date(curStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const actualEnd = curEnd > endDate ? endDate : curEnd;
+
+    const sStr = curStart.toISOString().slice(0, 10);
+    const eStr = actualEnd.toISOString().slice(0, 10);
+
+    weekSlices.push({
+      start: sStr,
+      end: eStr,
+      label: `${sStr} .. ${eStr} (أسبوعي)`,
+      type: 'week'
+    });
+
+    curStart = new Date(actualEnd.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  return weekSlices;
+}
+
+/**
+ * Step 1: Query GitHub API with per_page=1 to read total_count for an angle
  */
 export async function fetchAngleEstimate(
   query: string,
@@ -211,66 +247,54 @@ export async function fetchAngleEstimate(
 }
 
 /**
- * Clean neutral description generator & uncertainty flagger
- * Rule: Only report what repositories state about themselves.
- * Rule: If unsure whether to include, include with "flagged, verify yourself."
- * Rule: Only omit clearly unrelated results, report how many were omitted.
+ * Filter, classify, and flag repositories strictly by rules
  */
 export function processRepoItem(
   repo: GitHubRepoItem,
-  angleId: 'direct' | 'adjacent' | 'cross_domain'
+  discoveredAngle: 'direct' | 'adjacent' | 'cross-domain'
 ): { include: boolean; item?: FormattedRepo } {
   const rawDesc = (repo.description || '').trim();
   const repoName = repo.name || repo.full_name;
-
-  // Filter out clearly unrelated / blank spam if it contains neither relevant keywords nor description
   const combinedText = `${repoName} ${rawDesc} ${(repo.topics || []).join(' ')}`.toLowerCase();
-  
-  // Angle determination
-  let assignedAngle: 'direct' | 'adjacent' | 'cross-domain' = 'direct';
-  if (angleId === 'direct') assignedAngle = 'direct';
-  else if (angleId === 'adjacent') assignedAngle = 'adjacent';
-  else assignedAngle = 'cross-domain';
 
-  // Check if totally unrelated: zero description and name is completely generic
+  // Rule: Only omit results clearly unrelated to the topic
   if (!rawDesc && repoName.length < 4) {
     return { include: false };
   }
 
-  // Check for uncertainty flagging
+  // Rule: Handling uncertain results: if unsure whether to include, include it anyway with neutral description and "flagged, verify yourself."
   let isFlagged = false;
   let flagReason = '';
 
   if (!rawDesc) {
     isFlagged = true;
-    flagReason = 'لا يوجد وصف رسمي من المستودع - يلزم التحقق الذاتي';
+    flagReason = 'لا يوجد وصف من المستودع - يلزم التحقق الذاتي';
   } else if (rawDesc.length < 20) {
     isFlagged = true;
-    flagReason = 'الوصف مقتضب جداً - يلزم التحقق الذاتي';
+    flagReason = 'الوصف مقتضب - يلزم التحقق الذاتي';
   } else if (
     !combinedText.includes('clean') &&
-    !combinedText.includes('specification') &&
+    !combinedText.includes('spec') &&
     !combinedText.includes('reverse') &&
     !combinedText.includes('black box') &&
     !combinedText.includes('independent')
   ) {
     isFlagged = true;
-    flagReason = 'صلة غير مؤكدة تماماً بالمبدأ - تم التضمين مع إشعار التحقق الذاتي';
+    flagReason = 'صلة غير مؤكدة تماماً - تم التضمين مع إشعار التحقق الذاتي';
   }
 
-  // Clean description: strictly neutral, only what the repo states about itself
+  // Neutral description from repo's own title/description (Rule: never explain how any tool works)
   let cleanDescription = rawDesc || `Repository: ${repoName} (No description provided by author)`;
-  // Sanitize formatting characters
   cleanDescription = cleanDescription.replace(/[\r\n\t]+/g, ' ').trim();
 
   return {
     include: true,
     item: {
-      rank: 0, // will be assigned in batch
+      rank: 0,
       name: repo.full_name,
       url: repo.html_url,
-      angle: assignedAngle,
-      angleLabel: assignedAngle === 'direct' ? 'Direct' : assignedAngle === 'adjacent' ? 'Adjacent' : 'Cross-domain',
+      angle: discoveredAngle,
+      angleLabel: discoveredAngle === 'direct' ? 'direct' : discoveredAngle === 'adjacent' ? 'adjacent' : 'cross-domain',
       description: cleanDescription,
       isFlagged,
       flagReason: isFlagged ? (flagReason || 'flagged, verify yourself') : undefined,
@@ -282,9 +306,7 @@ export function processRepoItem(
 }
 
 /**
- * Format output text according to exact prompt specifications:
- * Output format: numbered list, 50 per message: name - link - which angle found it (direct/adjacent/cross-domain) - one-line description from the repo's own title/description.
- * End every reply with: total found so far, total remaining (from step 1's estimate), which date range was covered, the full GitHub search link for the user to verify themselves, and "Type continue for the next batch" — continuing means the NEXT date range, never re-running a covered search.
+ * Format output text according to prompt specification
  */
 export function formatBatchOutput(
   items: FormattedRepo[],

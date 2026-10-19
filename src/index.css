@@ -85,3 +85,28 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* 1. تعميم سلاسة الانتقال لجميع العناصر عند تغيير الثيم */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* 2. تحسين مظهر حدود البطاقات والعناصر بناءً على المتغيرات */
+.card, .border-custom {
+  border-color: var(--border-color);
+  background-color: var(--bg-card);
+}
+
+/* 3. تخصيص إطار التركيز (Focus Ring) للبحث والمدخلات ليتناسب مع الثيم */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+
+/* 4. تخصيص لون التحديد (Text Selection) */
+::selection {
+  background-color: #3b82f6;
+  color: #ffffff;
+}

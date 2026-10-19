@@ -1,6 +1,6 @@
 {
-  "name": "دليل 500 نموذج وأداة ذكاء اصطناعي - AI Models Directory & BYOK Playground",
-  "description": "دليل شامل وتفاعلي يضم أكثر من 1000 نموذج وأداة ذكاء اصطناعي مع حاسبة تكلفة الـ APIs الديناميكية، مختبر النماذج الحي ومقارنة الردود (BYOK Playground) المدعوم ببروكسي سحابي آمن، الموجه الذكي، وتصدير Markdown/JSON.",
+  "name": "RepoLister-X | Clean-Room Reverse Engineering GitHub Catalog Assistant",
+  "description": "أداة ومساعد فهرسة متقدم لمستودعات GitHub وفق مبدأ Clean-Room Reverse Engineering وفصل التوصيف السلوكي عن التنفيذ البرمجي عبر استراتيجية الزوايا الثلاث وتأخير الأمان.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

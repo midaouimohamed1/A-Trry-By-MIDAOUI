@@ -97,7 +97,9 @@ async function startServer() {
   // 3. Step 1: Pre-flight lightweight estimation (per_page=1) across ALL 3 angles
   app.post('/api/repolister/estimate', async (req, res) => {
     try {
-      const userToken = typeof req.body?.token === 'string' ? req.body.token.trim() : undefined;
+      const userToken = typeof req.body?.token === 'string' && req.body.token.trim()
+        ? req.body.token.trim()
+        : (process.env.GITHUB_TOKEN || undefined);
       const results: Array<{
         id: string;
         labelEn: string;
@@ -194,7 +196,9 @@ async function startServer() {
         'User-Agent': 'RepoLister-X-Catalog-Assistant/1.0'
       };
 
-      const userToken = typeof token === 'string' && token.trim() ? token.trim() : undefined;
+      const userToken = typeof token === 'string' && token.trim() 
+        ? token.trim() 
+        : (process.env.GITHUB_TOKEN || undefined);
       if (userToken) {
         headers['Authorization'] = `token ${userToken}`;
       }

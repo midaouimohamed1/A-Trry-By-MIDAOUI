@@ -221,8 +221,9 @@ export async function fetchAngleEstimate(
     'User-Agent': 'RepoLister-X-Catalog-Assistant/1.0'
   };
 
-  if (token && token.trim()) {
-    headers['Authorization'] = `token ${token.trim()}`;
+  const effectiveToken = (token && token.trim()) || process.env.GITHUB_TOKEN;
+  if (effectiveToken && effectiveToken.trim()) {
+    headers['Authorization'] = `token ${effectiveToken.trim()}`;
   }
 
   const response = await fetch(url, { headers });

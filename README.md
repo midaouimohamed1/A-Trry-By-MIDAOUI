@@ -55,13 +55,19 @@ RepoLister-X is a specialized, production-ready GitHub catalog assistant and AI 
 npm install
 ```
 
-### 2. Development Mode
+### 2. Optional: GitHub Token Configuration
+To increase the GitHub API rate limit from 10 requests/minute to 30–60 requests/minute, set your token in the `.env` file:
+```env
+GITHUB_TOKEN="your_personal_access_token_here"
+```
+
+### 3. Development Mode
 ```bash
 npm run dev
 ```
 Open `http://localhost:3000` in your browser.
 
-### 3. Production Build
+### 4. Production Build
 ```bash
 npm run build
 npm start

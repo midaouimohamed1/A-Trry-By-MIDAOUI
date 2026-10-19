@@ -58,7 +58,7 @@ async function startServer() {
         if (req.headers['x-no-compression']) return false;
         return compression.filter(req, res);
       }
-    })
+    }) as any
   );
 
   app.use(express.json({ limit: '64kb' }));

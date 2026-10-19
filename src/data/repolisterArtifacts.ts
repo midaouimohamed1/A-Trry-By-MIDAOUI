@@ -191,6 +191,61 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 
+  if (name === 'repolister_search_date_range') {
+    const { query, angle = 'direct', startDate, endDate, page = 1 } = args as any;
+    const dateFilter = \`created:\${startDate}..\${endDate}\`;
+    const fullQuery = \`\${query} \${dateFilter}\`;
+
+    await rateLimitDelay();
+    const res = await fetch(\`https://api.github.com/search/repositories?q=\${encodeURIComponent(query)}+\${encodeURIComponent(dateFilter)}&sort=updated&order=desc&per_page=50&page=\${page}\`, {
+      headers: {
+        'User-Agent': 'RepoLister-X-MCP/1.0',
+        'Accept': 'application/vnd.github.v3+json',
+        ...(GITHUB_TOKEN ? { Authorization: \`token \${GITHUB_TOKEN}\` } : {})
+      }
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return {
+        isError: true,
+        content: [{ type: 'text', text: \`GitHub API Error (\${res.status}): \${errText}\` }]
+      };
+    }
+
+    const data = await res.json();
+    const rawItems = data.items || [];
+    const formattedList = rawItems.map((repo: any, index: number) => {
+      const num = (page - 1) * 50 + index + 1;
+      const desc = (repo.description || \`Repository: \${repo.full_name}\`).trim().replace(/[\\r\\n]+/g, ' ');
+      const isFlagged = !repo.description || repo.description.length < 20;
+      const flagNotice = isFlagged ? ' [flagged, verify yourself]' : '';
+      return \`\${num}. \${repo.full_name} - \${repo.html_url} - \${angle} - \${desc}\${flagNotice}\`;
+    });
+
+    const webVerificationUrl = \`https://github.com/search?q=\${encodeURIComponent(query)}+\${encodeURIComponent(dateFilter)}&type=repositories&s=updated&o=desc\`;
+    const remainingEstimated = Math.max(0, (data.total_count || 0) - (page * 50));
+
+    const responseText = [
+      ...formattedList,
+      '',
+      '---',
+      \`• Total found so far in this range: \${Math.min(page * 50, data.total_count || 0)}\`,
+      \`• Total remaining in range: \${remainingEstimated}\`,
+      \`• Date range covered: \${startDate} .. \${endDate}\`,
+      \`• Full GitHub search link for self-verification: \${webVerificationUrl}\`,
+      '',
+      'Type continue for the next batch'
+    ].join('\\n');
+
+    return {
+      content: [{
+        type: 'text',
+        text: responseText
+      }]
+    };
+  }
+
   throw new Error(\`Unknown tool: \${name}\`);
 });
 

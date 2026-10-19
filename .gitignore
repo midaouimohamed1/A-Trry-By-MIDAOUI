@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build outputs & caches
+build/
+dist/
+dist-ssr/
+.vite/
+.cache/
+coverage/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment variables
+.env*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
